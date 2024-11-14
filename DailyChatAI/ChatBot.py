@@ -64,6 +64,8 @@ def chat(user_input):
             return text[:match_position + len(symbol)]
         return text
     response = identical_symbols_match_remove(response, "?", random.randint(1, 2)) # stop model chat with itself
+    response = identical_symbols_match_remove(response, "!", random.randint(1, 3)) # stop model chat with itself
+    response = identical_symbols_match_remove(response, "You're welcome.", 1)
     response = response.replace("What's up? Nothing much. How about you?", "What's up? I'm good. How about you?") # fix a trained model issue
 
     # Match and remove
@@ -74,7 +76,7 @@ def chat(user_input):
     # Stop sentence when output all expected info
     response = remove_after_keyword(response, "None") # stop try to continue generate nothing
     response = remove_after_keyword(response, " Hi") # no chat with model self
-    response = remove_after_keyword(response, "---") # no continue if this output
+    response = remove_after_keyword(response, "--") # no continue if this output
     response = remove_after_keyword(response, "  ") # no continue if this output
 
     # Save the response to the conversation history
