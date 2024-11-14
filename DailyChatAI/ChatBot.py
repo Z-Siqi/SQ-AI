@@ -15,6 +15,13 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 
 model.config.pad_token_id = tokenizer.pad_token_id
 
+def get_ending(text, textList): 
+    for i in textList:
+        if text.lower().endswith(i.lower()): 
+            return text[-len(i):]
+        if text[:-1].lower().endswith(i.lower()):
+            return text[-len(i):]
+    return None
 
 # Load conversation history if exists, otherwise create an empty list
 history_file = "conversation_history.json"
@@ -43,10 +50,6 @@ def chat(user_input):
         no_repeat_ngram_size=2,
         pad_token_id=tokenizer.eos_token_id,
         eos_token_id=tokenizer.eos_token_id,
-        #top_k=50,
-        #top_p=0.9,
-        #temperature=0.7,
-        #do_sample=True
     )
     
     # Decode the response
@@ -58,10 +61,10 @@ def chat(user_input):
         matches = list(pattern.finditer(text))
         if len(matches) >= num:
             match_position = matches[num-1].start()
-            return text[:match_position + 1]
+            return text[:match_position + len(symbol)]
         return text
-    response = identical_symbols_match_remove(response, "?", 2) # stop model chat with itself
-    response = identical_symbols_match_remove(response, "you?", 1) # no continue if this output
+    response = identical_symbols_match_remove(response, "?", random.randint(1, 2)) # stop model chat with itself
+    response = response.replace("What's up? Nothing much. How about you?", "What's up? I'm good. How about you?") # fix a trained model issue
 
     # Match and remove
     def remove_after_keyword(text, keyword):
@@ -72,7 +75,7 @@ def chat(user_input):
     response = remove_after_keyword(response, "None") # stop try to continue generate nothing
     response = remove_after_keyword(response, " Hi") # no chat with model self
     response = remove_after_keyword(response, "---") # no continue if this output
-    response = remove_after_keyword(response, "   ") # no continue if this output
+    response = remove_after_keyword(response, "  ") # no continue if this output
 
     # Save the response to the conversation history
     conversation_history.append({"role": "bot", "text": response})
@@ -82,14 +85,6 @@ def chat(user_input):
         json.dump(conversation_history, f, ensure_ascii=False, indent=4)
 
     return response
-
-def get_ending(text, textList): 
-    for i in textList:
-        if text.lower().endswith(i.lower()): 
-            return text[-len(i):]
-        if text[:-1].lower().endswith(i.lower()):
-            return text[-len(i):]
-    return None
 
 # Run the Flask app
 if __name__ == '__main__':
@@ -110,6 +105,7 @@ if __name__ == '__main__':
         if (contains_substring_regex(user_input, "I want to commit suicide")): print(riskResponse)
         if (contains_substring_regex(user_input, "I want to suicide")): print(riskResponse)
         # Model action
+        if (contains_substring_regex(user_input, "nothing much")): user_input = user_input + "." # fix a loop output issue
         print("Bot: " + chat(user_input))
         # If user say good bye
         if get_ending(user_input, ["bye", "bye for now", "see you around", "talk more later"]):
